@@ -1,6 +1,3 @@
-// Placeholder for custom hooks
-// Add custom hooks here
-
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 

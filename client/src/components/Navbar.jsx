@@ -50,7 +50,8 @@ export default function Navbar() {
                 to="/profile"
                 className="app-nav__link app-nav__link--active"
               >
-                👋 {user.name?.split(" ")[0] || "Profile"} · {user.points || 0} pts
+                👋 {user.name?.split(" ")[0] || "Profile"} · {user.points || 0}{" "}
+                pts
               </Link>
               <button
                 className="app-nav__link"

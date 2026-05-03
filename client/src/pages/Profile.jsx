@@ -12,6 +12,14 @@ export default function Profile() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase()
+    : "?";
 
   useEffect(() => {
     if (!loading && !user) {
@@ -90,6 +98,42 @@ export default function Profile() {
 
       <section className="grid-2">
         <div className="section-card animate-rise">
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem",
+              marginBottom: "1rem",
+            }}
+          >
+            <div
+              style={{
+                width: "72px",
+                height: "72px",
+                borderRadius: "22px",
+                display: "grid",
+                placeItems: "center",
+                color: "#fff",
+                fontSize: "1.5rem",
+                fontWeight: 800,
+                background: "linear-gradient(135deg, #4f46e5, #14b8a6)",
+                boxShadow: "0 16px 30px rgba(79, 70, 229, 0.28)",
+              }}
+            >
+              {initials}
+            </div>
+
+            <div>
+              <p className="section-copy" style={{ marginBottom: "0.25rem" }}>
+                Welcome back
+              </p>
+              <h2 style={{ fontSize: "1.4rem" }}>{user.name}</h2>
+              <p style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
+                {user.email}
+              </p>
+            </div>
+          </div>
+
           <div className="meta-row" style={{ marginTop: 0 }}>
             <span className="meta-pill">{user.role}</span>
             <span className="meta-pill">{user.points || 0} points</span>

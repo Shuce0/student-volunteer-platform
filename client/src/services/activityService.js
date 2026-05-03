@@ -1,0 +1,39 @@
+import api from "./api";
+
+export const activityService = {
+  getAllActivities: async () => {
+    try {
+      const response = await api.get("/activities");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to fetch activities";
+    }
+  },
+
+  getActivityById: async (id) => {
+    try {
+      const response = await api.get(`/activities/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to fetch activity";
+    }
+  },
+
+  createActivity: async (activityData) => {
+    try {
+      const response = await api.post("/activities", activityData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to create activity";
+    }
+  },
+
+  registerForActivity: async (activityId) => {
+    try {
+      const response = await api.post(`/activities/${activityId}/register`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to register for activity";
+    }
+  },
+};

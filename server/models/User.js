@@ -12,14 +12,80 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    studentId: {
+      type: String,
+      required: function () {
+        return this.role !== "club";
+      },
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
+    clubId: {
+      type: String,
+      unique: true,
+      sparse: true,
+      default: function () {
+        if (this.role !== "club") return undefined;
+
+        return `CLB-${Date.now().toString(36).toUpperCase()}-${Math.random()
+          .toString(36)
+          .slice(2, 6)
+          .toUpperCase()}`;
+      },
+    },
+    faculty: {
+      type: String,
+      required: function () {
+        return this.role !== "club";
+      },
+      trim: true,
+    },
+    unit: {
+      type: String,
+      required: function () {
+        return this.role === "club";
+      },
+      trim: true,
+    },
+    className: {
+      type: String,
+      required: function () {
+        return this.role !== "club";
+      },
+      trim: true,
+    },
+    gender: {
+      type: String,
+      required: function () {
+        return this.role !== "club";
+      },
+      enum: ["male", "female", "other"],
+    },
+    birthDate: {
+      type: Date,
+      required: function () {
+        return this.role !== "club";
+      },
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     password: {
       type: String,
       required: true,
     },
     role: {
       type: String,
-      enum: ["student", "admin", "moderator"],
-      default: "student",
+      enum: ["user", "admin", "club"],
+      default: "user",
+    },
+    approvalStatus: {
+      type: String,
+      enum: ["approved", "pending"],
+      default: "approved",
     },
     points: {
       type: Number,

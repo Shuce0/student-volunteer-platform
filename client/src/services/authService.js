@@ -14,6 +14,11 @@ export const authService = {
   register: async (userData) => {
     try {
       const response = await api.post("/auth/register", userData);
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      } else {
+        localStorage.removeItem("token");
+      }
       return response.data;
     } catch (error) {
       throw error.response?.data?.message || "Registration failed";
@@ -39,6 +44,24 @@ export const authService = {
       return response.data;
     } catch (error) {
       throw error.response?.data?.message || "Failed to update profile";
+    }
+  },
+
+  getPendingClubs: async () => {
+    try {
+      const response = await api.get("/auth/pending-clubs");
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to fetch pending clubs";
+    }
+  },
+
+  approveClub: async (id) => {
+    try {
+      const response = await api.put(`/auth/clubs/${id}/approve`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to approve club";
     }
   },
 };

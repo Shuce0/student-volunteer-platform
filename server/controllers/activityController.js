@@ -4,8 +4,9 @@ const User = require("../models/User");
 exports.getAllActivities = async (req, res) => {
   try {
     const activities = await Activity.find()
-      .populate("organizer", "name email")
+      .populate("organizer", "name email role")
       .populate("registeredParticipants", "name");
+
     res.json(activities);
   } catch (error) {
     res
@@ -17,7 +18,7 @@ exports.getAllActivities = async (req, res) => {
 exports.getActivityById = async (req, res) => {
   try {
     const activity = await Activity.findById(req.params.id)
-      .populate("organizer", "name email")
+      .populate("organizer", "name email role")
       .populate("registeredParticipants", "name email");
 
     if (!activity) {
@@ -47,6 +48,7 @@ exports.createActivity = async (req, res) => {
     const activity = new Activity({
       title,
       description,
+      image: req.file ? `/uploads/${req.file.filename}` : req.body.image,
       date,
       location,
       category,

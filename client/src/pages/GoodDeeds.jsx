@@ -64,17 +64,62 @@ export default function GoodDeeds() {
     }));
   };
 
+  const approvedCount = goodDeeds.length;
+  const totalPoints = goodDeeds.reduce(
+    (sum, deed) => sum + (deed.points || 0),
+    0,
+  );
+  const categories = new Set(goodDeeds.map((deed) => deed.category));
+
   return (
     <div className="container page-section page-stack">
-      <section className="page-hero animate-rise" style={{ padding: "2rem" }}>
-        <div className="hero-kicker">💚 Good deeds journal</div>
-        <h1 className="hero-title" style={{ maxWidth: "none" }}>
-          Việc tốt của bạn
-        </h1>
-        <p className="hero-subtitle">
-          Ghi lại những việc tốt, lan tỏa cảm hứng tích cực và đợi điểm số được
-          duyệt.
-        </p>
+      <section className="page-hero animate-rise">
+        <div className="hero-grid">
+          <div>
+            <div className="hero-kicker">💚 Việc tốt của bạn</div>
+            <h1 className="hero-title" style={{ maxWidth: "none" }}>
+              Ghi nhận việc tốt theo phong cách HUTECH
+            </h1>
+            <p className="hero-subtitle">
+              Ghi lại những việc tốt, lan tỏa cảm hứng tích cực và để hệ thống
+              tự động tổng hợp điểm số của bạn.
+            </p>
+            <div className="hero-actions">
+              <button
+                className="button button--primary"
+                onClick={() => setShowForm((value) => !value)}
+                type="button"
+              >
+                {showForm ? "Đóng form" : "Gửi việc tốt"}
+              </button>
+            </div>
+          </div>
+
+          <div className="hero-panel hero-panel--muted">
+            <div className="hero-panel__title">Tổng quan nhanh</div>
+            <div
+              className="dashboard-stats"
+              style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+            >
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Đã duyệt</div>
+                <div className="dashboard-stat__value">{approvedCount}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Tổng điểm</div>
+                <div className="dashboard-stat__value">{totalPoints}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Danh mục</div>
+                <div className="dashboard-stat__value">{categories.size}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Trạng thái</div>
+                <div className="dashboard-stat__value">OK</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {message && (
@@ -82,13 +127,6 @@ export default function GoodDeeds() {
       )}
 
       <section className="section-card animate-rise">
-        <button
-          className="button button--primary"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? "Đóng form" : "Gửi việc tốt của bạn"}
-        </button>
-
         {showForm && (
           <form
             onSubmit={handleSubmit}

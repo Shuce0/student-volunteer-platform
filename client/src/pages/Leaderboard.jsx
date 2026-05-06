@@ -21,17 +21,54 @@ export default function Leaderboard() {
     fetchLeaderboard();
   }, []);
 
+  const totalUsers = leaderboard.length;
+  const topScore = leaderboard[0]?.points || 0;
+  const totalPoints = leaderboard.reduce(
+    (sum, user) => sum + (user.points || 0),
+    0,
+  );
+  const averageScore = totalUsers ? Math.round(totalPoints / totalUsers) : 0;
+
   return (
     <div className="container page-section page-stack">
-      <section className="page-hero animate-rise" style={{ padding: "2rem" }}>
-        <div className="hero-kicker">🏆 Leaderboard</div>
-        <h1 className="hero-title" style={{ maxWidth: "none" }}>
-          Bảng xếp hạng nổi bật
-        </h1>
-        <p className="hero-subtitle">
-          Ghi nhận những sinh viên năng nổ nhất và lan tỏa tinh thần cống hiến
-          trong cộng đồng.
-        </p>
+      <section className="page-hero animate-rise">
+        <div className="hero-grid">
+          <div>
+            <div className="hero-kicker">🏆 Bảng xếp hạng HUTECH</div>
+            <h1 className="hero-title" style={{ maxWidth: "none" }}>
+              Ghi nhận sinh viên năng nổ nhất
+            </h1>
+            <p className="hero-subtitle">
+              Xem những gương mặt dẫn đầu, theo dõi điểm số và lan tỏa tinh thần
+              cống hiến trong cộng đồng.
+            </p>
+          </div>
+
+          <div className="hero-panel hero-panel--muted">
+            <div className="hero-panel__title">Thống kê nhanh</div>
+            <div
+              className="dashboard-stats"
+              style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+            >
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Thành viên</div>
+                <div className="dashboard-stat__value">{totalUsers}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Điểm cao nhất</div>
+                <div className="dashboard-stat__value">{topScore}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Tổng điểm</div>
+                <div className="dashboard-stat__value">{totalPoints}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Trung bình</div>
+                <div className="dashboard-stat__value">{averageScore}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {loading ? (
@@ -42,7 +79,12 @@ export default function Leaderboard() {
         <div className="page-stack">
           {leaderboard.slice(0, 3).length > 0 && (
             <section className="section-card animate-rise">
-              <h2 className="section-heading">Top 3 podium</h2>
+              <div className="dashboard-section-title">
+                <h2 className="section-heading" style={{ marginBottom: 0 }}>
+                  Top 3 podium
+                </h2>
+                <span className="meta-pill">Cập nhật theo thời gian thực</span>
+              </div>
               <div className="podium-grid">
                 {leaderboard[1] && (
                   <div
@@ -85,7 +127,12 @@ export default function Leaderboard() {
           )}
 
           <section className="section-card animate-rise">
-            <h2 className="section-heading">Full ranking</h2>
+            <div className="dashboard-section-title">
+              <h2 className="section-heading" style={{ marginBottom: 0 }}>
+                Full ranking
+              </h2>
+              <span className="meta-pill">{leaderboard.length} thành viên</span>
+            </div>
             <div className="page-stack">
               {leaderboard.map((user, index) => (
                 <LeaderboardItem key={user._id} rank={index + 1} user={user} />
@@ -93,10 +140,7 @@ export default function Leaderboard() {
             </div>
           </section>
 
-          <section
-            className="page-hero animate-rise"
-            style={{ padding: "2rem" }}
-          >
+          <section className="page-hero animate-rise">
             <h2
               className="hero-title"
               style={{

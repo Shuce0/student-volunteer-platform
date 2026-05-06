@@ -81,15 +81,48 @@ export default function Profile() {
 
   return (
     <div className="container page-section page-stack">
-      <section className="page-hero animate-rise" style={{ padding: "2rem" }}>
-        <div className="hero-kicker">👤 My profile</div>
-        <h1 className="hero-title" style={{ maxWidth: "none" }}>
-          Hồ sơ của tôi
-        </h1>
-        <p className="hero-subtitle">
-          Quản lý tài khoản, cập nhật thông tin cá nhân và giữ cho hồ sơ của bạn
-          luôn mới.
-        </p>
+      <section className="page-hero animate-rise">
+        <div className="hero-grid">
+          <div>
+            <div className="hero-kicker">👤 Hồ sơ sinh viên</div>
+            <h1 className="hero-title" style={{ maxWidth: "none" }}>
+              Quản lý tài khoản của bạn
+            </h1>
+            <p className="hero-subtitle">
+              Cập nhật thông tin cá nhân, theo dõi điểm số và giữ hồ sơ đồng bộ
+              với hệ thống tình nguyện.
+            </p>
+          </div>
+
+          <div className="hero-panel hero-panel--muted">
+            <div className="hero-panel__title">Tổng quan nhanh</div>
+            <div
+              className="dashboard-stats"
+              style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+            >
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Điểm</div>
+                <div className="dashboard-stat__value">{user.points || 0}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Hoạt động</div>
+                <div className="dashboard-stat__value">
+                  {user.registeredActivities?.length || 0}
+                </div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Việc tốt</div>
+                <div className="dashboard-stat__value">
+                  {user.goodDeeds?.length || 0}
+                </div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Vai trò</div>
+                <div className="dashboard-stat__value">SV</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {message && (
@@ -116,8 +149,8 @@ export default function Profile() {
                 color: "#fff",
                 fontSize: "1.5rem",
                 fontWeight: 800,
-                background: "linear-gradient(135deg, #4f46e5, #14b8a6)",
-                boxShadow: "0 16px 30px rgba(79, 70, 229, 0.28)",
+                background: "linear-gradient(135deg, #d8202a, #8f0f14)",
+                boxShadow: "0 16px 30px rgba(210, 29, 39, 0.28)",
               }}
             >
               {initials}
@@ -125,7 +158,7 @@ export default function Profile() {
 
             <div>
               <p className="section-copy" style={{ marginBottom: "0.25rem" }}>
-                Welcome back
+                Chào mừng trở lại
               </p>
               <h2 style={{ fontSize: "1.4rem" }}>{user.name}</h2>
               <p style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
@@ -136,29 +169,21 @@ export default function Profile() {
 
           <div className="meta-row" style={{ marginTop: 0 }}>
             <span className="meta-pill">{user.role}</span>
-            <span className="meta-pill">{user.points || 0} points</span>
+            <span className="meta-pill">{user.points || 0} điểm</span>
             <span className="meta-pill">
-              Member since{" "}
-              {new Date(user.createdAt).toLocaleDateString("vi-VN")}
+              Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}
             </span>
-          </div>
-
-          <div style={{ marginTop: "1rem" }}>
-            <h2 style={{ fontSize: "1.4rem" }}>{user.name}</h2>
-            <p style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
-              {user.email}
-            </p>
           </div>
 
           <div className="grid-2" style={{ marginTop: "1rem" }}>
             <div className="stat-card">
-              <p className="stat-label">Registered activities</p>
+              <p className="stat-label">Hoạt động đã đăng ký</p>
               <p className="stat-value" style={{ fontSize: "2rem" }}>
                 {user.registeredActivities?.length || 0}
               </p>
             </div>
             <div className="stat-card">
-              <p className="stat-label">Good deeds</p>
+              <p className="stat-label">Việc tốt đã gửi</p>
               <p className="stat-value" style={{ fontSize: "2rem" }}>
                 {user.goodDeeds?.length || 0}
               </p>

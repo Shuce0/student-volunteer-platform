@@ -2,7 +2,7 @@ const User = require("../models/User");
 
 exports.getLeaderboard = async (req, res) => {
   try {
-    const leaderboard = await User.find({ role: "student" })
+    const leaderboard = await User.find({ role: "user" })
       .select("name email points")
       .sort({ points: -1 })
       .limit(100);
@@ -25,7 +25,7 @@ exports.getUserRank = async (req, res) => {
 
     const rank = await User.countDocuments({
       points: { $gt: user.points },
-      role: "student",
+      role: "user",
     });
 
     res.json({

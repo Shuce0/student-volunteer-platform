@@ -1,28 +1,121 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
+const mapUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  studentId: user.studentId,
+  clubId: user.clubId,
+  faculty: user.faculty,
+  unit: user.unit,
+  className: user.className,
+  gender: user.gender,
+  birthDate: user.birthDate,
+  phone: user.phone,
+  approvalStatus: user.approvalStatus,
+  points: user.points,
+  registeredActivities: user.registeredActivities,
+  goodDeeds: user.goodDeeds,
+  createdAt: user.createdAt,
+});
+
 exports.register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      studentId,
+      faculty,
+      unit,
+      organization,
+      className,
+      gender,
+      birthDate,
+      phone,
+    } = req.body;
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email already registered" });
+    const normalizedRole = (role || "user").toLowerCase();
+
+    if (!["user", "club"].includes(normalizedRole)) {
+      return res.status(400).json({
+        message: "Only user or club roles can be registered directly",
+      });
     }
 
-    const user = new User({ name, email, password });
+    const isClub = normalizedRole === "club";
+    const missingStudentFields =
+      !name ||
+      !email ||
+      !password ||
+      !studentId ||
+      !faculty ||
+      !className ||
+      !gender ||
+      !birthDate ||
+      !phone;
+    const clubUnit = unit || organization;
+    const missingClubFields =
+      !name || !email || !password || !phone || !clubUnit;
+
+    if ((isClub && missingClubFields) || (!isClub && missingStudentFields)) {
+      return res.status(400).json({
+        message: isClub
+          ? "Vui lòng điền đầy đủ thông tin đăng ký CLB"
+          : "Vui lòng điền đầy đủ thông tin đăng ký",
+      });
+    }
+
+    const existingUser = isClub
+      ? await User.findOne({ email })
+      : await User.findOne({ $or: [{ email }, { studentId }] });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message:
+          existingUser.email === email
+            ? "Email already registered"
+            : "Mã số sinh viên đã tồn tại",
+      });
+    }
+
+    const approvalStatus = isClub ? "pending" : "approved";
+    const user = new User({
+      name,
+      email,
+      password,
+      role: normalizedRole,
+      studentId: isClub ? undefined : studentId,
+      faculty: isClub ? undefined : faculty,
+      unit: isClub ? clubUnit : undefined,
+      className: isClub ? undefined : className,
+      gender: isClub ? undefined : gender,
+      birthDate: isClub ? undefined : birthDate,
+      phone,
+      approvalStatus,
+    });
+
     await user.save();
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
+    const response = {
+      message: isClub
+        ? "Đã gửi yêu cầu đăng ký CLB, vui lòng chờ admin duyệt"
+        : "User registered successfully",
+      user: mapUser(user),
+    };
 
-    res.status(201).json({
-      message: "User registered successfully",
-      user: { id: user._id, name: user.name, email: user.email },
-      token,
-    });
+    if (!isClub) {
+      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+        expiresIn: "7d",
+      });
+
+      response.token = token;
+    }
+
+    res.status(201).json(response);
   } catch (error) {
     res
       .status(500)
@@ -39,6 +132,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
+    if (user.approvalStatus === "pending") {
+      return res.status(403).json({
+        message: "Tài khoản CLB đang chờ admin duyệt",
+      });
+    }
+
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(400).json({ message: "Invalid email or password" });
@@ -50,12 +149,7 @@ exports.login = async (req, res) => {
 
     res.json({
       message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
+      user: mapUser(user),
       token,
     });
   } catch (error) {
@@ -80,7 +174,7 @@ exports.getCurrentUser = async (req, res) => {
 
 exports.updateCurrentUser = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone, unit } = req.body;
     const user = await User.findById(req.userId);
 
     if (!user) {
@@ -99,6 +193,14 @@ exports.updateCurrentUser = async (req, res) => {
       user.name = name;
     }
 
+    if (phone) {
+      user.phone = phone;
+    }
+
+    if (unit && user.role === "club") {
+      user.unit = unit;
+    }
+
     if (password) {
       user.password = password;
     }
@@ -107,20 +209,56 @@ exports.updateCurrentUser = async (req, res) => {
 
     res.json({
       message: "Profile updated successfully",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        points: user.points,
-        registeredActivities: user.registeredActivities,
-        goodDeeds: user.goodDeeds,
-        createdAt: user.createdAt,
-      },
+      user: mapUser(user),
     });
   } catch (error) {
     res
       .status(500)
       .json({ message: "Failed to update profile", error: error.message });
+  }
+};
+
+exports.getPendingClubApplications = async (req, res) => {
+  try {
+    const pendingClubs = await User.find({
+      role: "club",
+      approvalStatus: "pending",
+    })
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    res.json(pendingClubs);
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch pending club applications",
+      error: error.message,
+    });
+  }
+};
+
+exports.approveClubApplication = async (req, res) => {
+  try {
+    const club = await User.findOne({
+      _id: req.params.id,
+      role: "club",
+      approvalStatus: "pending",
+    });
+
+    if (!club) {
+      return res.status(404).json({ message: "Club application not found" });
+    }
+
+    club.approvalStatus = "approved";
+    await club.save();
+
+    res.json({
+      message: "Club approved successfully",
+      user: mapUser(club),
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to approve club application",
+      error: error.message,
+    });
   }
 };

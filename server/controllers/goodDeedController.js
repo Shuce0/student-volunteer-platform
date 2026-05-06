@@ -14,6 +14,23 @@ exports.getAllGoodDeeds = async (req, res) => {
   }
 };
 
+exports.getPendingGoodDeeds = async (req, res) => {
+  try {
+    const goodDeeds = await GoodDeed.find({ verified: false })
+      .populate("user", "name email")
+      .sort({ createdAt: -1 });
+
+    res.json(goodDeeds);
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch pending good deeds",
+        error: error.message,
+      });
+  }
+};
+
 exports.createGoodDeed = async (req, res) => {
   try {
     const { title, description, category, points } = req.body;

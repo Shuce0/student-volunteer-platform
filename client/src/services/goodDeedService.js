@@ -19,6 +19,26 @@ export const goodDeedService = {
     }
   },
 
+  getPendingGoodDeeds: async () => {
+    try {
+      const response = await api.get("/good-deeds/pending");
+      return response.data;
+    } catch (error) {
+      throw (
+        error.response?.data?.message || "Failed to fetch pending good deeds"
+      );
+    }
+  },
+
+  verifyGoodDeed: async (id) => {
+    try {
+      const response = await api.put(`/good-deeds/${id}/verify`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to verify good deed";
+    }
+  },
+
   getUserGoodDeeds: async (userId) => {
     try {
       const response = await api.get(`/good-deeds/user/${userId}`);

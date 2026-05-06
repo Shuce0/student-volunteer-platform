@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import api from "../services/api";
 import { activityService } from "../services/activityService";
 import ActivityCard from "../components/ActivityCard";
 import { useAuth } from "../hooks/useAuth";
+import hcmBanner1 from "../assets/hcm-banner1.png";
+import hcmBanner2 from "../assets/hcm-banner2.png";
+import hcmBanner3 from "../assets/hcm-banner3.png";
 
 // Ho Chi Minh quotes (random selection)
 const QUOTES = [
@@ -28,10 +32,14 @@ const QUOTES = [
   },
 ];
 
+const BANNERS = [hcmBanner1, hcmBanner2, hcmBanner3];
+
 export default function Home() {
   const [featuredActivities, setFeaturedActivities] = useState([]);
+  const [leaderboardPreview, setLeaderboardPreview] = useState([]);
   const [loading, setLoading] = useState(true);
   const [randomQuote, setRandomQuote] = useState(QUOTES[0]);
+  const [bannerIndex, setBannerIndex] = useState(0);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -48,66 +56,190 @@ export default function Home() {
       }
     };
 
+    const fetchLeaderboard = async () => {
+      try {
+        const response = await api.get("/leaderboard");
+        setLeaderboardPreview(response.data.slice(0, 4));
+      } catch (error) {
+        console.error("Failed to fetch leaderboard preview:", error);
+      }
+    };
+
     fetchActivities();
+    fetchLeaderboard();
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setBannerIndex((currentIndex) => (currentIndex + 1) % BANNERS.length);
+    }, 3000);
+
+    return () => window.clearInterval(timer);
   }, []);
 
   return (
     <div className="container page-section page-stack">
-      <section className="page-hero animate-rise">
-        <div className="hero-kicker">
-          ✨ Student Volunteer Platform
-          {user ? ` • Chào mừng, ${user.name?.split(" ")[0]}` : ""}
-        </div>
-        <h1 className="hero-title">
-          {user
-            ? `Chào mừng trở lại, ${user.name}`
-            : "Tình nguyện theo phong cách sinh viên hiện đại"}
-        </h1>
-        <p className="hero-subtitle">
-          {user
-            ? `Bạn đang có ${user.points || 0} điểm. Hôm nay hãy tiếp tục góp một việc tốt hoặc đăng ký thêm một hoạt động mới.`
-            : "Một không gian để đăng ký hoạt động, ghi nhận việc tốt và leo bảng xếp hạng với cảm giác nhanh, rõ ràng, và truyền cảm hứng hơn."}
-        </p>
-
-        <div className="hero-actions">
-          <Link to="/activities" className="button button--primary">
-            Khám phá hoạt động
-          </Link>
-          {user && (
-            <Link to="/profile" className="button button--secondary">
-              Hồ sơ của tôi
-            </Link>
-          )}
-          <Link to="/leaderboard" className="button button--secondary">
-            Xem bảng xếp hạng
-          </Link>
-        </div>
-
-        <div className="hero-grid">
-          <div className="hero-panel">
-            <p className="hero-panel__title">
-              {user ? "Personal progress" : "Quote of the day"}
-            </p>
-            <p className="quote-text">“{randomQuote.text}”</p>
-            <p className="quote-author">— {randomQuote.author}</p>
+      <section className="dashboard-hero-grid dashboard-hero-grid--feature animate-rise">
+        <div className="dashboard-hero-banner dashboard-hero-banner--slideshow">
+          <img
+            key={bannerIndex}
+            className="dashboard-hero-banner__image"
+            src={BANNERS[bannerIndex]}
+            alt="Hồ Chí Minh và cờ Việt Nam"
+          />
+          <div className="dashboard-hero-banner__dots" aria-hidden="true">
+            {BANNERS.map((_, index) => (
+              <span
+                key={index}
+                className={index === bannerIndex ? "is-active" : ""}
+              />
+            ))}
           </div>
-          <div className="hero-panel hero-panel--muted">
-            <p className="hero-panel__title">Why it feels different</p>
-            <div className="chip-row">
-              <span className="chip">Responsive</span>
-              <span className="chip">Clean UI</span>
-              <span className="chip">Fast actions</span>
-              <span className="chip">Point tracking</span>
-            </div>
+        </div>
+
+        <div className="dashboard-hero-quote">
+          <div className="dashboard-hero-quote__title">
+            <span>Lời Bác dạy</span>
+            <span>❝❞</span>
+          </div>
+          <p className="dashboard-hero-quote__quote">“{randomQuote.text}”</p>
+          <p className="dashboard-hero-quote__author">— {randomQuote.author}</p>
+          <div className="chip-row" style={{ marginTop: "1rem" }}>
+            <span className="chip chip--active">HUTECH</span>
+            <span className="chip">Tinh thần tình nguyện</span>
+            <span className="chip">Làm theo lời Bác</span>
           </div>
         </div>
       </section>
 
+      <section
+        className="dashboard-hero-grid animate-rise"
+        style={{ gridTemplateColumns: "minmax(0, 1.1fr) minmax(280px, 0.9fr)" }}
+      >
+        <div className="dashboard-hero-banner dashboard-hero-banner--content">
+          <div
+            className="hero-kicker"
+            style={{
+              color: "#a3121a",
+              borderColor: "rgba(210,29,39,0.12)",
+              background: "rgba(210,29,39,0.06)",
+            }}
+          >
+            {user ? `Xin chào, ${user.name}` : "HUTECH Volunteer Dashboard"}
+          </div>
+          <h1
+            className="hero-title"
+            style={{ maxWidth: "none", color: "#7b0f15" }}
+          >
+            {user
+              ? `Bạn đang có ${user.points || 0} điểm. Tiếp tục bứt phá nhé!`
+              : "Dashboard tình nguyện sinh viên HUTECH"}
+          </h1>
+          <p
+            className="hero-subtitle"
+            style={{ color: "var(--muted)", maxWidth: "none" }}
+          >
+            {user
+              ? "Cập nhật hồ sơ, theo dõi đăng ký của bạn và tiếp tục tích lũy điểm cho bảng xếp hạng."
+              : "Theo dõi hoạt động, ghi nhận việc tốt và xếp hạng sinh viên trong một giao diện đỏ năng động."}
+          </p>
+          <div className="hero-actions">
+            <Link to="/activities" className="button button--primary">
+              Khám phá hoạt động
+            </Link>
+            {user && (
+              <Link to="/profile" className="button button--secondary">
+                Hồ sơ của tôi
+              </Link>
+            )}
+            <Link to="/leaderboard" className="button button--secondary">
+              Xem bảng xếp hạng
+            </Link>
+          </div>
+        </div>
+
+        <div className="dashboard-hero-side">
+          <div className="dashboard-hero-side__title">
+            <span>Bảng xếp hạng</span>
+            <span>Top 4</span>
+          </div>
+          {leaderboardPreview.length > 0 ? (
+            <div className="page-stack" style={{ gap: "0.75rem" }}>
+              {leaderboardPreview.map((member, index) => (
+                <div
+                  key={member._id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    padding: "0.8rem",
+                    borderRadius: "16px",
+                    background: index === 0 ? "rgba(210,29,39,0.08)" : "#fff",
+                    border: "1px solid rgba(210,29,39,0.1)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: "50%",
+                      display: "grid",
+                      placeItems: "center",
+                      background:
+                        index === 0
+                          ? "linear-gradient(135deg, #d8202a, #8f0f14)"
+                          : "#f3e2e1",
+                      color: index === 0 ? "#fff" : "#8f0f14",
+                      fontWeight: 800,
+                    }}
+                  >
+                    {index + 1}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <strong>{member.name}</strong>
+                    <p style={{ color: "var(--muted)", fontSize: "0.9rem" }}>
+                      {member.points} điểm
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">Đang tải bảng xếp hạng...</p>
+          )}
+        </div>
+      </section>
+
+      <section className="dashboard-stats">
+        <div className="dashboard-stat animate-rise">
+          <p className="dashboard-stat__label">Hoạt động</p>
+          <p className="dashboard-stat__value">12+</p>
+        </div>
+        <div className="dashboard-stat animate-rise">
+          <p className="dashboard-stat__label">Sinh viên</p>
+          <p className="dashboard-stat__value">250+</p>
+        </div>
+        <div className="dashboard-stat animate-rise">
+          <p className="dashboard-stat__label">Việc tốt</p>
+          <p className="dashboard-stat__value">98+</p>
+        </div>
+        <div className="dashboard-stat animate-rise">
+          <p className="dashboard-stat__label">Xếp hạng của bạn</p>
+          <p className="dashboard-stat__value">24</p>
+        </div>
+      </section>
+
       <section className="section-card animate-rise">
-        <h2 className="section-heading">🌟 Hoạt động nổi bật</h2>
-        <p className="section-copy">
-          Các hoạt động được chọn để bạn bắt đầu ngay hôm nay.
-        </p>
+        <div className="dashboard-section-title">
+          <div>
+            <h2 className="section-heading">Hoạt động nổi bật</h2>
+            <p className="section-copy">
+              Các hoạt động được chọn để bạn bắt đầu ngay hôm nay.
+            </p>
+          </div>
+          <Link to="/activities">Xem tất cả →</Link>
+        </div>
+
         {loading ? (
           <p className="loading-state">Đang tải hoạt động...</p>
         ) : featuredActivities.length > 0 ? (
@@ -123,43 +255,45 @@ export default function Home() {
         )}
       </section>
 
-      <section className="grid-3">
-        <div className="stat-card animate-rise">
-          <p className="stat-label">Hoạt động</p>
-          <p className="stat-value">12+</p>
-        </div>
-        <div className="stat-card animate-rise">
-          <p className="stat-label">Sinh viên</p>
-          <p className="stat-value">250+</p>
-        </div>
-        <div className="stat-card animate-rise">
-          <p className="stat-label">Việc tốt</p>
-          <p className="stat-value">98+</p>
-        </div>
-      </section>
-
-      <section className="page-hero animate-rise" style={{ padding: "2rem" }}>
-        <h2
-          className="hero-title"
-          style={{ maxWidth: "none", fontSize: "clamp(1.7rem, 3vw, 2.6rem)" }}
-        >
-          {user
-            ? "Bạn đã sẵn sàng để bứt tốc hôm nay chưa?"
-            : "Bạn đã sẵn sàng để tạo dấu ấn chưa?"}
-        </h2>
-        <p className="hero-subtitle">
-          {user
-            ? "Mở hồ sơ của bạn để cập nhật thông tin, xem điểm và quản lý tài khoản ngay trong một chỗ."
-            : "Tham gia, ghi nhận, và nhìn thành quả của bạn lan tỏa trong cộng đồng sinh viên."}
-        </p>
-        <div className="hero-actions">
-          <Link to="/activities" className="button button--primary">
-            Đi tới hoạt động
-          </Link>
-          <Link to="/good-deeds" className="button button--secondary">
-            Gửi việc tốt
-          </Link>
-        </div>
+      <section
+        className="dashboard-hero-grid animate-rise"
+        id="guide"
+        style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}
+      >
+        {[
+          {
+            icon: "🤝",
+            title: "Gửi việc tốt",
+            text: "Chia sẻ hành động đẹp của bạn",
+          },
+          {
+            icon: "👥",
+            title: "Khám phá CLB",
+            text: "Kết nối với các CLB trong trường",
+          },
+          {
+            icon: "📘",
+            title: "Hướng dẫn",
+            text: "Tìm hiểu cách tham gia hoạt động",
+          },
+          {
+            icon: "❤️",
+            title: "Cộng đồng",
+            text: "Tham gia cộng đồng tình nguyện viên",
+          },
+        ].map((item) => (
+          <div
+            key={item.title}
+            className="dashboard-hero-side"
+            style={{ display: "grid", gap: "0.5rem" }}
+          >
+            <div style={{ fontSize: "1.6rem" }}>{item.icon}</div>
+            <strong>{item.title}</strong>
+            <p style={{ color: "var(--muted)", lineHeight: 1.5 }}>
+              {item.text}
+            </p>
+          </div>
+        ))}
       </section>
     </div>
   );

@@ -21,7 +21,9 @@ export const activityService = {
 
   createActivity: async (activityData) => {
     try {
-      const response = await api.post("/activities", activityData);
+      const response = await api.post("/activities", activityData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data?.message || "Failed to create activity";

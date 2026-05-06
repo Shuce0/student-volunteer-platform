@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { activityService } from "../services/activityService";
+import ActivityCard from "../components/ActivityCard";
 
 export default function Activities() {
   const [activities, setActivities] = useState([]);
@@ -50,18 +51,80 @@ export default function Activities() {
   };
 
   const categories = ["all", ...new Set(activities.map((a) => a.category))];
+  const totalActivities = activities.length;
+  const openSlots = activities.reduce(
+    (sum, activity) =>
+      sum +
+      Math.max(
+        (activity.maxParticipants || 0) -
+          (activity.registeredParticipants?.length || 0),
+        0,
+      ),
+    0,
+  );
+  const totalPoints = activities.reduce(
+    (sum, activity) => sum + (activity.points || 0),
+    0,
+  );
 
   return (
     <div className="container page-section page-stack">
-      <section className="page-hero animate-rise" style={{ padding: "2rem" }}>
-        <div className="hero-kicker">📋 Volunteer activities</div>
-        <h1 className="hero-title" style={{ maxWidth: "none" }}>
-          Danh sách hoạt động tình nguyện
-        </h1>
-        <p className="hero-subtitle">
-          Chọn hoạt động phù hợp, đăng ký nhanh và theo dõi điểm số của bạn ngay
-          lập tức.
-        </p>
+      <section className="page-hero animate-rise">
+        <div className="hero-grid">
+          <div>
+            <div className="hero-kicker">📋 Hoạt động tình nguyện</div>
+            <h1 className="hero-title" style={{ maxWidth: "none" }}>
+              Danh sách hoạt động HUTECH
+            </h1>
+            <p className="hero-subtitle">
+              Chọn hoạt động phù hợp, đăng ký nhanh và theo dõi điểm số ngay
+              trong một giao diện dashboard gọn gàng.
+            </p>
+            <div className="hero-actions">
+              <button
+                className="button button--primary"
+                type="button"
+                onClick={() => handleFilterChange("all")}
+              >
+                Xem tất cả
+              </button>
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() => handleFilterChange(categories[1] || "all")}
+              >
+                Lọc nhanh
+              </button>
+            </div>
+          </div>
+
+          <div className="hero-panel hero-panel--muted">
+            <div className="hero-panel__title">Tổng quan nhanh</div>
+            <div
+              className="dashboard-stats"
+              style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
+            >
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Hoạt động</div>
+                <div className="dashboard-stat__value">{totalActivities}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Chỗ trống</div>
+                <div className="dashboard-stat__value">{openSlots}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Điểm tích lũy</div>
+                <div className="dashboard-stat__value">{totalPoints}</div>
+              </div>
+              <div className="dashboard-stat">
+                <div className="dashboard-stat__label">Danh mục</div>
+                <div className="dashboard-stat__value">
+                  {categories.length - 1}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {message && (
@@ -90,30 +153,15 @@ export default function Activities() {
       ) : (
         <div className="grid-2">
           {filteredActivities.map((activity) => (
-            <article key={activity._id} className="activity-card animate-rise">
-              <div className="meta-row" style={{ marginTop: 0 }}>
-                <span className="meta-pill">+{activity.points} points</span>
-                <span className="meta-pill">{activity.category}</span>
-              </div>
-              <h3 style={{ marginTop: "0.9rem" }}>{activity.title}</h3>
-              <p style={{ color: "var(--muted)", marginTop: "0.55rem" }}>
-                {activity.description}
-              </p>
-
-              <div className="meta-row">
-                <span className="meta-pill">📍 {activity.location}</span>
-                <span className="meta-pill">
-                  📅 {new Date(activity.date).toLocaleDateString("vi-VN")}
-                </span>
-                <span className="meta-pill">
-                  👥 {activity.registeredParticipants?.length || 0}/
-                  {activity.maxParticipants}
-                </span>
-              </div>
-
+            <div
+              key={activity._id}
+              className="page-stack"
+              style={{ gap: "0.85rem" }}
+            >
+              <ActivityCard activity={activity} />
               <button
                 className="button button--primary"
-                style={{ width: "100%", marginTop: "1rem" }}
+                style={{ width: "100%" }}
                 onClick={() => handleRegister(activity._id)}
                 disabled={registering === activity._id}
               >
@@ -121,7 +169,7 @@ export default function Activities() {
                   ? "Đang đăng ký..."
                   : "Đăng ký tham gia"}
               </button>
-            </article>
+            </div>
           ))}
         </div>
       )}

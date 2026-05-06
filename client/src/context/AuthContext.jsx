@@ -32,6 +32,17 @@ export function AuthProvider({ children }) {
     return data;
   };
 
+  const register = async (userData) => {
+    const data = await authService.register(userData);
+    if (data.token) {
+      const currentUser = await authService.getCurrentUser();
+      setUser(currentUser);
+    } else {
+      setUser(null);
+    }
+    return data;
+  };
+
   const updateUser = async (userData) => {
     const data = await authService.updateCurrentUser(userData);
     setUser(data.user);
@@ -44,7 +55,9 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, logout, updateUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

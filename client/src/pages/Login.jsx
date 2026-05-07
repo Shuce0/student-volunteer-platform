@@ -216,7 +216,7 @@ export default function Login() {
                 <div className="grid-2">
                   <input
                     type="date"
-                    placeholder="mm/dd/yyyy"
+                    placeholder="Ngày sinh (mm/dd/yyyy)"
                     value={birthDate}
                     onChange={(e) => setBirthDate(e.target.value)}
                     className="input"

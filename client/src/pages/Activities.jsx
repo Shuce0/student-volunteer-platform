@@ -1,56 +1,116 @@
-import { useState, useEffect } from "react";
-import { activityService } from "../services/activityService";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ActivityCard from "../components/ActivityCard";
+import { useAuth } from "../hooks/useAuth";
+import { activityService } from "../services/activityService";
+
+function getParticipantId(participant) {
+  if (!participant) return null;
+  if (typeof participant === "string") return participant;
+  return participant._id || participant.id || null;
+}
 
 export default function Activities() {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
-  const [filteredActivities, setFilteredActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [viewTab, setViewTab] = useState("upcoming");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [registering, setRegistering] = useState(null);
-  const [message, setMessage] = useState("");
+  const [toast, setToast] = useState(null);
+
+  const currentUserId = user?._id || user?.id || null;
+  const now = Date.now();
+
+  const loadActivities = async () => {
+    try {
+      const data = await activityService.getAllActivities();
+      setActivities(data);
+    } catch (error) {
+      console.error("Failed to fetch activities:", error);
+      setToast({
+        type: "danger",
+        message: "Không thể tải danh sách hoạt động",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const data = await activityService.getAllActivities();
-        setActivities(data);
-        setFilteredActivities(data);
-      } catch (error) {
-        console.error("Failed to fetch activities:", error);
-        setMessage("Không thể tải danh sách hoạt động");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchActivities();
+    loadActivities();
   }, []);
 
-  const handleRegister = async (activityId) => {
-    setRegistering(activityId);
-    try {
-      await activityService.registerForActivity(activityId);
-      setMessage("✅ Đăng ký thành công!");
-      setTimeout(() => setMessage(""), 3000);
-    } catch (error) {
-      setMessage("❌ Đăng ký thất bại: " + error);
-      setTimeout(() => setMessage(""), 3000);
-    } finally {
-      setRegistering(null);
-    }
+  useEffect(() => {
+    if (!toast) return undefined;
+
+    const timer = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const isUpcoming = (activity) => new Date(activity.date).getTime() >= now;
+
+  const isRegistered = (activity) => {
+    if (!currentUserId) return false;
+
+    return activity.registeredParticipants?.some(
+      (participant) =>
+        getParticipantId(participant)?.toString() === currentUserId.toString(),
+    );
   };
 
-  const handleFilterChange = (newFilter) => {
-    setFilter(newFilter);
-    if (newFilter === "all") {
-      setFilteredActivities(activities);
-    } else {
-      setFilteredActivities(activities.filter((a) => a.category === newFilter));
-    }
-  };
+  const isParticipated = (activity) =>
+    isRegistered(activity) && !isUpcoming(activity);
 
-  const categories = ["all", ...new Set(activities.map((a) => a.category))];
+  const isFull = (activity) =>
+    (activity.registeredParticipants?.length || 0) >=
+    (activity.maxParticipants || 0);
+
+  const categories = useMemo(
+    () => ["all", ...new Set(activities.map((activity) => activity.category))],
+    [activities],
+  );
+
+  const viewTabs = useMemo(() => {
+    const upcomingCount = activities.filter((activity) =>
+      isUpcoming(activity),
+    ).length;
+    const participatedCount = activities.filter((activity) =>
+      isParticipated(activity),
+    ).length;
+
+    return [
+      { id: "upcoming", label: "Sắp diễn ra", count: upcomingCount },
+      { id: "participated", label: "Đã tham gia", count: participatedCount },
+      { id: "all", label: "Tất cả", count: activities.length },
+    ];
+  }, [activities, currentUserId]);
+
+  const visibleActivities = useMemo(() => {
+    let next = activities;
+
+    if (viewTab === "upcoming") {
+      next = next.filter((activity) => isUpcoming(activity));
+    } else if (viewTab === "participated") {
+      next = next.filter((activity) => isParticipated(activity));
+    }
+
+    if (categoryFilter !== "all") {
+      next = next.filter((activity) => activity.category === categoryFilter);
+    }
+
+    if (searchQuery.trim()) {
+      const normalizedQuery = searchQuery.trim().toLowerCase();
+      next = next.filter((activity) =>
+        activity.title?.toLowerCase().includes(normalizedQuery),
+      );
+    }
+
+    return next;
+  }, [activities, categoryFilter, searchQuery, viewTab]);
+
   const totalActivities = activities.length;
   const openSlots = activities.reduce(
     (sum, activity) =>
@@ -62,13 +122,174 @@ export default function Activities() {
       ),
     0,
   );
+
   const totalPoints = activities.reduce(
     (sum, activity) => sum + (activity.points || 0),
     0,
   );
 
+  const handleRegister = async (activity) => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isUpcoming(activity)) {
+      setToast({ type: "danger", message: "Hoạt động này đã diễn ra." });
+      return;
+    }
+
+    if (isRegistered(activity)) {
+      setToast({
+        type: "success",
+        message: "Bạn đã đăng ký hoạt động này rồi.",
+      });
+      return;
+    }
+
+    if (isFull(activity)) {
+      setToast({ type: "danger", message: "Hoạt động đã đầy chỗ." });
+      return;
+    }
+
+    setRegistering(activity._id);
+    try {
+      const response = await activityService.registerForActivity(activity._id);
+      await Promise.all([loadActivities(), refreshUser()]);
+      setToast({
+        type: "success",
+        message:
+          response.message ||
+          "Đăng ký thành công. Nút đã chuyển sang trạng thái đã đăng ký.",
+      });
+    } catch (error) {
+      setToast({ type: "danger", message: "Đăng ký thất bại: " + error });
+    } finally {
+      setRegistering(null);
+    }
+  };
+
+  const handleCancel = async (activity) => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+
+    if (!isRegistered(activity)) {
+      setToast({ type: "danger", message: "Hoạt động này chưa được đăng ký." });
+      return;
+    }
+
+    if (!isUpcoming(activity)) {
+      setToast({
+        type: "danger",
+        message: "Chỉ có thể hủy các hoạt động sắp diễn ra.",
+      });
+      return;
+    }
+
+    setRegistering(activity._id);
+    try {
+      const response = await activityService.cancelRegistrationForActivity(
+        activity._id,
+      );
+      await Promise.all([loadActivities(), refreshUser()]);
+      setToast({
+        type: "success",
+        message: response.message || "Đã hủy đăng ký thành công.",
+      });
+    } catch (error) {
+      setToast({ type: "danger", message: "Hủy đăng ký thất bại: " + error });
+    } finally {
+      setRegistering(null);
+    }
+  };
+
+  const getStatusLabel = (activity) => {
+    if (isParticipated(activity)) return "Đã tham gia";
+    if (isUpcoming(activity)) return "Sắp diễn ra";
+    return "Đã diễn ra";
+  };
+
+  const getPrimaryAction = (activity) => {
+    if (!user) {
+      return {
+        label: "Đăng nhập để đăng ký",
+        className: "button button--secondary",
+        onClick: () => navigate("/login"),
+        disabled: false,
+      };
+    }
+
+    if (isParticipated(activity)) {
+      return {
+        label: "Đã tham gia",
+        className: "button button--ghost",
+        disabled: true,
+      };
+    }
+
+    if (!isUpcoming(activity)) {
+      return {
+        label: "Đã diễn ra",
+        className: "button button--ghost",
+        disabled: true,
+      };
+    }
+
+    if (isRegistered(activity)) {
+      return {
+        label: registering === activity._id ? "Đang hủy..." : "Hủy đăng ký",
+        className: "button button--danger",
+        onClick: () => handleCancel(activity),
+        disabled: registering === activity._id,
+      };
+    }
+
+    if (isFull(activity)) {
+      return {
+        label: "Đã đầy chỗ",
+        className: "button button--ghost",
+        disabled: true,
+      };
+    }
+
+    return {
+      label:
+        registering === activity._id ? "Đang đăng ký..." : "Đăng ký tham gia",
+      className: "button button--primary",
+      onClick: () => handleRegister(activity),
+      disabled: registering === activity._id,
+    };
+  };
+
   return (
     <div className="container page-section page-stack">
+      {toast && (
+        <div
+          className={
+            toast.type === "success"
+              ? "profile-toast profile-toast--success animate-rise"
+              : "profile-toast profile-toast--danger animate-rise"
+          }
+        >
+          <div>
+            <div className="profile-toast__title">
+              {toast.type === "success" ? "Thành công" : "Thông báo"}
+            </div>
+            <div className="profile-toast__body">{toast.message}</div>
+          </div>
+          <button
+            type="button"
+            className="profile-toast__close"
+            aria-label="Đóng thông báo"
+            onClick={() => setToast(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <section className="page-hero animate-rise">
         <div className="hero-grid">
           <div>
@@ -77,23 +298,23 @@ export default function Activities() {
               Danh sách hoạt động HUTECH
             </h1>
             <p className="hero-subtitle">
-              Chọn hoạt động phù hợp, đăng ký nhanh và theo dõi điểm số ngay
-              trong một giao diện dashboard gọn gàng.
+              Duyệt hoạt động theo tab, xem chi tiết trên trang riêng và đăng ký
+              hoặc hủy đăng ký ngay từ đây.
             </p>
             <div className="hero-actions">
               <button
                 className="button button--primary"
                 type="button"
-                onClick={() => handleFilterChange("all")}
+                onClick={() => setCategoryFilter("all")}
               >
-                Xem tất cả
+                Xem tất cả danh mục
               </button>
               <button
                 className="button button--secondary"
                 type="button"
-                onClick={() => handleFilterChange(categories[1] || "all")}
+                onClick={() => navigate("/profile")}
               >
-                Lọc nhanh
+                Xem lịch sử của tôi
               </button>
             </div>
           </div>
@@ -127,50 +348,118 @@ export default function Activities() {
         </div>
       </section>
 
-      {message && (
-        <div className="notice notice--success animate-rise">{message}</div>
-      )}
+      <section className="section-card animate-rise activity-filter-panel">
+        <div className="dashboard-section-title activity-filter-panel__header">
+          <div>
+            <h2 className="section-heading" style={{ marginBottom: 0 }}>
+              Bộ lọc hoạt động
+            </h2>
+            <p className="section-copy" style={{ marginBottom: 0 }}>
+              Lọc theo trạng thái, danh mục và tên hoạt động trong một khối.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="button button--ghost"
+            onClick={() => {
+              setViewTab("upcoming");
+              setCategoryFilter("all");
+              setSearchQuery("");
+            }}
+          >
+            Đặt lại bộ lọc
+          </button>
+        </div>
 
-      <section className="section-card animate-rise">
-        <h2 className="section-heading">Lọc theo danh mục</h2>
-        <div className="chip-row">
-          {categories.map((category) => (
-            <button
-              key={category}
-              className={filter === category ? "chip chip--active" : "chip"}
-              onClick={() => handleFilterChange(category)}
-            >
-              {category === "all" ? "Tất cả" : category}
-            </button>
-          ))}
+        <div className="activity-filter-panel__body">
+          <label className="activity-search activity-search--panel">
+            <span>🔎</span>
+            <input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Tìm theo tên hoạt động..."
+              aria-label="Tìm kiếm hoạt động theo tên"
+            />
+          </label>
+
+          <div className="activity-filter-group">
+            <div className="activity-filter-group__title">Chế độ xem</div>
+            <div className="chip-row">
+              {viewTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  className={viewTab === tab.id ? "chip chip--active" : "chip"}
+                  onClick={() => setViewTab(tab.id)}
+                  type="button"
+                >
+                  {tab.label} · {tab.count}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="activity-filter-group">
+            <div className="activity-filter-group__title">Danh mục</div>
+            <div className="chip-row">
+              {categories.map((category) => (
+                <button
+                  key={category}
+                  className={
+                    categoryFilter === category ? "chip chip--active" : "chip"
+                  }
+                  onClick={() => setCategoryFilter(category)}
+                  type="button"
+                >
+                  {category === "all" ? "Tất cả" : category}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {loading ? (
         <p className="loading-state">Đang tải hoạt động...</p>
-      ) : filteredActivities.length === 0 ? (
-        <p className="empty-state">Không có hoạt động nào</p>
+      ) : visibleActivities.length === 0 ? (
+        <p className="empty-state">Không có hoạt động nào phù hợp.</p>
       ) : (
         <div className="grid-2">
-          {filteredActivities.map((activity) => (
-            <div
-              key={activity._id}
-              className="page-stack"
-              style={{ gap: "0.85rem" }}
-            >
-              <ActivityCard activity={activity} />
-              <button
-                className="button button--primary"
-                style={{ width: "100%" }}
-                onClick={() => handleRegister(activity._id)}
-                disabled={registering === activity._id}
+          {visibleActivities.map((activity) => {
+            const action = getPrimaryAction(activity);
+
+            return (
+              <div
+                key={activity._id}
+                className="page-stack"
+                style={{ gap: "0.85rem" }}
               >
-                {registering === activity._id
-                  ? "Đang đăng ký..."
-                  : "Đăng ký tham gia"}
-              </button>
-            </div>
-          ))}
+                <ActivityCard
+                  activity={activity}
+                  statusLabel={getStatusLabel(activity)}
+                />
+                <div className="hero-actions" style={{ gap: "0.75rem" }}>
+                  <button
+                    className="button button--secondary"
+                    type="button"
+                    style={{ flex: "1 1 0" }}
+                    onClick={() => navigate(`/activities/${activity._id}`)}
+                  >
+                    Xem chi tiết
+                  </button>
+                  <button
+                    className={action.className}
+                    style={{ flex: "1 1 0" }}
+                    onClick={action.onClick}
+                    disabled={action.disabled}
+                    type="button"
+                  >
+                    {action.label}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

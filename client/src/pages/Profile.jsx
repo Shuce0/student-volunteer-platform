@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import ActivityCard from "../components/ActivityCard";
 import { useAuth } from "../hooks/useAuth";
+import { activityService } from "../services/activityService";
+
+function formatDisplayDate(value) {
+  if (!value) return "Chưa cập nhật";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Chưa cập nhật";
+
+  return date.toLocaleDateString("vi-VN");
+}
 
 export default function Profile() {
-  const { user, loading, updateUser, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [activities, setActivities] = useState([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const initials = user?.name
     ? user.name
         .split(" ")
@@ -28,52 +35,47 @@ export default function Profile() {
   }, [loading, user, navigate]);
 
   useEffect(() => {
-    if (user) {
-      setFormData({
-        name: user.name || "",
-        email: user.email || "",
-        password: "",
-      });
-    }
-  }, [user]);
+    const fetchActivities = async () => {
+      if (!user) return;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage("");
-
-    try {
-      const payload = {
-        name: formData.name,
-        email: formData.email,
-      };
-
-      if (formData.password.trim()) {
-        payload.password = formData.password;
+      try {
+        const data = await activityService.getAllActivities();
+        setActivities(Array.isArray(data) ? data : []);
+      } catch (error) {
+        setErrorMessage(error);
+      } finally {
+        setActivitiesLoading(false);
       }
+    };
 
-      const response = await updateUser(payload);
-      setMessage(response.message || "Cập nhật hồ sơ thành công");
-      setFormData((prev) => ({ ...prev, password: "" }));
-    } catch (error) {
-      setMessage(error);
-    } finally {
-      setSaving(false);
+    if (!loading && user) {
+      fetchActivities();
     }
-  };
+
+    if (!loading && !user) {
+      setActivitiesLoading(false);
+    }
+  }, [loading, user]);
 
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
+
+  const registeredActivityIds = new Set(user?.registeredActivities || []);
+  const registeredActivities = activities.filter((activity) =>
+    registeredActivityIds.has(activity._id),
+  );
+  const upcomingActivities = registeredActivities
+    .filter((activity) => new Date(activity.date).getTime() >= Date.now())
+    .sort((left, right) => new Date(left.date) - new Date(right.date));
+  const pastActivities = registeredActivities
+    .filter((activity) => new Date(activity.date).getTime() < Date.now())
+    .sort((left, right) => new Date(right.date) - new Date(left.date));
+
+  const historyItems = [...pastActivities, ...upcomingActivities].sort(
+    (left, right) => new Date(right.date) - new Date(left.date),
+  );
 
   if (loading || !user) {
     return <p className="loading-state">Đang tải hồ sơ...</p>;
@@ -84,13 +86,13 @@ export default function Profile() {
       <section className="page-hero animate-rise">
         <div className="hero-grid">
           <div>
-            <div className="hero-kicker">👤 Hồ sơ sinh viên</div>
+            <div className="hero-kicker">📋 Đăng ký của tôi</div>
             <h1 className="hero-title" style={{ maxWidth: "none" }}>
-              Quản lý tài khoản của bạn
+              Hoạt động đã đăng ký và lịch sử tham gia
             </h1>
             <p className="hero-subtitle">
-              Cập nhật thông tin cá nhân, theo dõi điểm số và giữ hồ sơ đồng bộ
-              với hệ thống tình nguyện.
+              Trang này chỉ hiển thị các hoạt động bạn đã đăng ký, cùng lịch sử
+              tham gia theo thời gian để bạn dễ theo dõi.
             </p>
           </div>
 
@@ -107,150 +109,124 @@ export default function Profile() {
               <div className="dashboard-stat">
                 <div className="dashboard-stat__label">Hoạt động</div>
                 <div className="dashboard-stat__value">
-                  {user.registeredActivities?.length || 0}
+                  {registeredActivities.length}
                 </div>
               </div>
               <div className="dashboard-stat">
-                <div className="dashboard-stat__label">Việc tốt</div>
+                <div className="dashboard-stat__label">Sắp diễn ra</div>
                 <div className="dashboard-stat__value">
-                  {user.goodDeeds?.length || 0}
+                  {upcomingActivities.length}
                 </div>
               </div>
               <div className="dashboard-stat">
-                <div className="dashboard-stat__label">Vai trò</div>
-                <div className="dashboard-stat__value">SV</div>
+                <div className="dashboard-stat__label">Đã tham gia</div>
+                <div className="dashboard-stat__value">
+                  {pastActivities.length}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {message && (
-        <div className="notice notice--success animate-rise">{message}</div>
+      {errorMessage && (
+        <div className="notice notice--danger animate-rise">{errorMessage}</div>
       )}
 
       <section className="grid-2">
-        <div className="section-card animate-rise">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "1rem",
-              marginBottom: "1rem",
-            }}
-          >
-            <div
-              style={{
-                width: "72px",
-                height: "72px",
-                borderRadius: "22px",
-                display: "grid",
-                placeItems: "center",
-                color: "#fff",
-                fontSize: "1.5rem",
-                fontWeight: 800,
-                background: "linear-gradient(135deg, #d8202a, #8f0f14)",
-                boxShadow: "0 16px 30px rgba(210, 29, 39, 0.28)",
-              }}
-            >
-              {initials}
-            </div>
-
-            <div>
-              <p className="section-copy" style={{ marginBottom: "0.25rem" }}>
-                Chào mừng trở lại
-              </p>
-              <h2 style={{ fontSize: "1.4rem" }}>{user.name}</h2>
-              <p style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
-                {user.email}
-              </p>
-            </div>
+        <section className="section-card animate-rise page-stack">
+          <div>
+            <h2 className="section-heading">Hoạt động đã đăng ký</h2>
+            <p className="section-copy">
+              Các hoạt động bạn đã bấm đăng ký, sắp xếp theo thời gian diễn ra.
+            </p>
           </div>
 
-          <div className="meta-row" style={{ marginTop: 0 }}>
-            <span className="meta-pill">{user.role}</span>
-            <span className="meta-pill">{user.points || 0} điểm</span>
-            <span className="meta-pill">
-              Tham gia từ {new Date(user.createdAt).toLocaleDateString("vi-VN")}
-            </span>
-          </div>
+          {activitiesLoading ? (
+            <p className="loading-state">Đang tải hoạt động...</p>
+          ) : registeredActivities.length === 0 ? (
+            <p className="empty-state">Bạn chưa đăng ký hoạt động nào.</p>
+          ) : (
+            <div className="page-stack">
+              {upcomingActivities.length > 0 && (
+                <div className="page-stack" style={{ gap: "0.85rem" }}>
+                  <h3 className="section-copy" style={{ marginBottom: 0 }}>
+                    Sắp diễn ra
+                  </h3>
+                  {upcomingActivities.map((activity) => (
+                    <ActivityCard key={activity._id} activity={activity} />
+                  ))}
+                </div>
+              )}
 
-          <div className="grid-2" style={{ marginTop: "1rem" }}>
-            <div className="stat-card">
-              <p className="stat-label">Hoạt động đã đăng ký</p>
-              <p className="stat-value" style={{ fontSize: "2rem" }}>
-                {user.registeredActivities?.length || 0}
-              </p>
+              {pastActivities.length > 0 && (
+                <div className="page-stack" style={{ gap: "0.85rem" }}>
+                  <h3 className="section-copy" style={{ marginBottom: 0 }}>
+                    Đã tham gia
+                  </h3>
+                  {pastActivities.map((activity) => (
+                    <ActivityCard key={activity._id} activity={activity} />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="stat-card">
-              <p className="stat-label">Việc tốt đã gửi</p>
-              <p className="stat-value" style={{ fontSize: "2rem" }}>
-                {user.goodDeeds?.length || 0}
-              </p>
+          )}
+        </section>
+
+        <section className="section-card animate-rise page-stack">
+          <div>
+            <h2 className="section-heading">Lịch sử tham gia</h2>
+            <p className="section-copy">
+              Nhật ký các hoạt động đã đăng ký, bao gồm cả hoạt động đã hoàn
+              thành và hoạt động sắp diễn ra.
+            </p>
+          </div>
+
+          <div className="stat-card">
+            <p className="stat-label">Tổng lượt hoạt động</p>
+            <p className="stat-value" style={{ fontSize: "2rem" }}>
+              {historyItems.length}
+            </p>
+          </div>
+
+          {activitiesLoading ? (
+            <p className="loading-state">Đang tải lịch sử...</p>
+          ) : historyItems.length === 0 ? (
+            <p className="empty-state">Chưa có lịch sử tham gia để hiển thị.</p>
+          ) : (
+            <div className="page-stack" style={{ gap: "0.85rem" }}>
+              {historyItems.map((activity) => {
+                const isPast = new Date(activity.date).getTime() < Date.now();
+
+                return (
+                  <article
+                    key={activity._id}
+                    className="activity-card"
+                    style={{ padding: "1rem 1.1rem" }}
+                  >
+                    <div className="meta-row" style={{ marginTop: 0 }}>
+                      <span className="meta-pill">
+                        {isPast ? "Đã tham gia" : "Sắp diễn ra"}
+                      </span>
+                      <span className="meta-pill">+{activity.points} điểm</span>
+                    </div>
+                    <h3 style={{ marginTop: "0.8rem", fontSize: "1.08rem" }}>
+                      {activity.title}
+                    </h3>
+                    <p style={{ color: "var(--muted)", marginTop: "0.35rem" }}>
+                      {activity.location} · {formatDisplayDate(activity.date)}
+                    </p>
+                    <div className="meta-row" style={{ marginTop: "0.8rem" }}>
+                      <span className="meta-pill">{activity.category}</span>
+                      <span className="meta-pill">
+                        {isPast ? "Đã hoàn thành" : "Đang chờ tham gia"}
+                      </span>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-          </div>
-
-          <div className="hero-actions" style={{ marginTop: "1rem" }}>
-            <button
-              className="button button--secondary"
-              onClick={() => navigate("/")}
-            >
-              Về trang chủ
-            </button>
-            <button className="button button--ghost" onClick={handleLogout}>
-              Đăng xuất
-            </button>
-          </div>
-        </div>
-
-        <section className="section-card animate-rise">
-          <h2 className="section-heading">Chỉnh sửa hồ sơ</h2>
-          <p className="section-copy">
-            Cập nhật tên, email và mật khẩu của bạn tại đây.
-          </p>
-
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <label className="page-stack" style={{ gap: "0.45rem" }}>
-              <span>Họ và tên</span>
-              <input
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="input"
-              />
-            </label>
-
-            <label className="page-stack" style={{ gap: "0.45rem" }}>
-              <span>Email</span>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="input"
-              />
-            </label>
-
-            <label className="page-stack" style={{ gap: "0.45rem" }}>
-              <span>Mật khẩu mới</span>
-              <input
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Để trống nếu không đổi"
-                className="input"
-              />
-            </label>
-
-            <button
-              className="button button--primary"
-              type="submit"
-              disabled={saving}
-            >
-              {saving ? "Đang lưu..." : "Lưu thay đổi"}
-            </button>
-          </form>
+          )}
         </section>
       </section>
     </div>

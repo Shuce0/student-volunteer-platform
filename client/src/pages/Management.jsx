@@ -33,12 +33,14 @@ export default function Management() {
   const navigate = useNavigate();
 
   const [activities, setActivities] = useState([]);
+  const [pendingRegistrations, setPendingRegistrations] = useState([]);
   const [pendingGoodDeeds, setPendingGoodDeeds] = useState([]);
   const [pendingClubs, setPendingClubs] = useState([]);
   const [activityForm, setActivityForm] = useState(initialActivityForm);
   const [savingActivity, setSavingActivity] = useState(false);
   const [verifyingId, setVerifyingId] = useState(null);
   const [approvingClubId, setApprovingClubId] = useState(null);
+  const [approvingRegistrationId, setApprovingRegistrationId] = useState(null);
   const [loadingData, setLoadingData] = useState(true);
   const [message, setMessage] = useState("");
   const [imageFile, setImageFile] = useState(null);
@@ -47,6 +49,8 @@ export default function Management() {
   const canManageActivities = user?.role === "admin" || user?.role === "club";
   const canVerifyGoodDeeds = user?.role === "admin";
   const canApproveClubs = user?.role === "admin";
+  const canApproveRegistrations =
+    user?.role === "admin" || user?.role === "club";
   const canAccess = canManageActivities || canVerifyGoodDeeds;
 
   useEffect(() => {
@@ -58,15 +62,20 @@ export default function Management() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [activitiesData, pendingData] = await Promise.all([
-          activityService.getAllActivities(),
-          canVerifyGoodDeeds
-            ? goodDeedService.getPendingGoodDeeds()
-            : Promise.resolve([]),
-        ]);
+        const [activitiesData, pendingData, pendingRegistrationsData] =
+          await Promise.all([
+            activityService.getAllActivities(),
+            canVerifyGoodDeeds
+              ? goodDeedService.getPendingGoodDeeds()
+              : Promise.resolve([]),
+            canApproveRegistrations
+              ? activityService.getPendingRegistrations()
+              : Promise.resolve([]),
+          ]);
 
         setActivities(activitiesData);
         setPendingGoodDeeds(pendingData);
+        setPendingRegistrations(pendingRegistrationsData);
         setPendingClubs(
           canApproveClubs ? await authService.getPendingClubs() : [],
         );
@@ -80,7 +89,13 @@ export default function Management() {
     if (user && canAccess) {
       loadData();
     }
-  }, [user, canAccess, canVerifyGoodDeeds, canApproveClubs]);
+  }, [
+    user,
+    canAccess,
+    canVerifyGoodDeeds,
+    canApproveClubs,
+    canApproveRegistrations,
+  ]);
 
   const stats = useMemo(() => {
     const openSlots = activities.reduce(
@@ -98,8 +113,9 @@ export default function Management() {
       activities: activities.length,
       openSlots,
       pendingGoodDeeds: pendingGoodDeeds.length,
+      pendingRegistrations: pendingRegistrations.length,
     };
-  }, [activities, pendingGoodDeeds]);
+  }, [activities, pendingGoodDeeds, pendingRegistrations]);
 
   const handleActivityChange = (e) => {
     const { name, value } = e.target;
@@ -178,6 +194,22 @@ export default function Management() {
     }
   };
 
+  const handleApproveRegistration = async (id) => {
+    setApprovingRegistrationId(id);
+    setMessage("");
+
+    try {
+      await activityService.approveRegistration(id);
+      setMessage("✅ Đã duyệt và cộng điểm cho sinh viên");
+      setPendingRegistrations((prev) => prev.filter((item) => item._id !== id));
+      setActivities(await activityService.getAllActivities());
+    } catch (error) {
+      setMessage(error);
+    } finally {
+      setApprovingRegistrationId(null);
+    }
+  };
+
   if (authLoading || !user) {
     return <p className="loading-state">Đang tải trang quản lý...</p>;
   }
@@ -226,6 +258,14 @@ export default function Management() {
                   <div className="dashboard-stat__label">CLB chờ duyệt</div>
                   <div className="dashboard-stat__value">
                     {pendingClubs.length}
+                  </div>
+                </div>
+              )}
+              {canApproveRegistrations && (
+                <div className="dashboard-stat">
+                  <div className="dashboard-stat__label">Đăng ký chờ duyệt</div>
+                  <div className="dashboard-stat__value">
+                    {stats.pendingRegistrations}
                   </div>
                 </div>
               )}
@@ -445,6 +485,67 @@ export default function Management() {
                     {approvingClubId === club._id
                       ? "Đang cấp quyền..."
                       : "Cấp quyền CLUB"}
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {canApproveRegistrations && (
+        <section className="section-card animate-rise">
+          <div className="dashboard-section-title">
+            <h2 className="section-heading" style={{ marginBottom: 0 }}>
+              Duyệt điểm tham gia hoạt động
+            </h2>
+            <span className="meta-pill">Admin / CLB tổ chức</span>
+          </div>
+
+          {loadingData ? (
+            <p className="loading-state">Đang tải dữ liệu...</p>
+          ) : pendingRegistrations.length === 0 ? (
+            <p className="empty-state">Không có đăng ký nào đang chờ duyệt.</p>
+          ) : (
+            <div className="page-stack">
+              {pendingRegistrations.map((registration) => (
+                <article key={registration._id} className="activity-card">
+                  <div className="meta-row" style={{ marginTop: 0 }}>
+                    <span className="meta-pill">
+                      {registration.activity?.category}
+                    </span>
+                    <span className="meta-pill">
+                      +{registration.activity?.points || 0} điểm
+                    </span>
+                    <span className="meta-pill">Chờ duyệt</span>
+                  </div>
+                  <h3 style={{ marginTop: "0.75rem" }}>
+                    {registration.activity?.title}
+                  </h3>
+                  <p style={{ color: "var(--muted)", marginTop: "0.5rem" }}>
+                    {registration.user?.name} · {registration.user?.email}
+                  </p>
+                  <div className="meta-row">
+                    <span className="meta-pill">
+                      📍 {registration.activity?.location}
+                    </span>
+                    <span className="meta-pill">
+                      📅{" "}
+                      {new Date(registration.activity?.date).toLocaleDateString(
+                        "vi-VN",
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    className="button button--danger"
+                    type="button"
+                    onClick={() => handleApproveRegistration(registration._id)}
+                    disabled={approvingRegistrationId === registration._id}
+                    style={{ marginTop: "1rem" }}
+                  >
+                    {approvingRegistrationId === registration._id
+                      ? "Đang duyệt..."
+                      : "Duyệt và cộng điểm"}
                   </button>
                 </article>
               ))}

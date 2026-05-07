@@ -7,6 +7,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshUser = async () => {
+    const currentUser = await authService.getCurrentUser();
+    setUser(currentUser);
+    return currentUser;
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
@@ -27,16 +33,14 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const data = await authService.login(email, password);
-    const currentUser = await authService.getCurrentUser();
-    setUser(currentUser);
+    await refreshUser();
     return data;
   };
 
   const register = async (userData) => {
     const data = await authService.register(userData);
     if (data.token) {
-      const currentUser = await authService.getCurrentUser();
-      setUser(currentUser);
+      await refreshUser();
     } else {
       setUser(null);
     }
@@ -56,7 +60,15 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, logout, updateUser }}
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+        updateUser,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

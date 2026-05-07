@@ -14,8 +14,8 @@ const registrationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["registered", "completed", "cancelled"],
-      default: "registered",
+      enum: ["pending", "approved", "cancelled"],
+      default: "pending",
     },
     hoursContributed: {
       type: Number,

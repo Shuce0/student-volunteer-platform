@@ -256,7 +256,7 @@ export default function Navbar({ children }) {
 
             {user ? (
               <>
-                <Link to="/profile" className="dashboard-user-chip">
+                <Link to="/account" className="dashboard-user-chip">
                   <span className="dashboard-user-chip__avatar">
                     {initials}
                   </span>

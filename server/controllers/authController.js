@@ -174,7 +174,18 @@ exports.getCurrentUser = async (req, res) => {
 
 exports.updateCurrentUser = async (req, res) => {
   try {
-    const { name, email, password, phone, unit } = req.body;
+    const {
+      name,
+      email,
+      password,
+      phone,
+      studentId,
+      faculty,
+      className,
+      gender,
+      birthDate,
+      unit,
+    } = req.body;
     const user = await User.findById(req.userId);
 
     if (!user) {
@@ -183,10 +194,21 @@ exports.updateCurrentUser = async (req, res) => {
 
     if (email && email !== user.email) {
       const existingUser = await User.findOne({ email });
-      if (existingUser) {
+      if (existingUser && existingUser._id.toString() !== user._id.toString()) {
         return res.status(400).json({ message: "Email already registered" });
       }
       user.email = email;
+    }
+
+    if (studentId && user.role !== "club" && studentId !== user.studentId) {
+      const existingStudent = await User.findOne({ studentId });
+      if (
+        existingStudent &&
+        existingStudent._id.toString() !== user._id.toString()
+      ) {
+        return res.status(400).json({ message: "Mã số sinh viên đã tồn tại" });
+      }
+      user.studentId = studentId;
     }
 
     if (name) {
@@ -195,6 +217,24 @@ exports.updateCurrentUser = async (req, res) => {
 
     if (phone) {
       user.phone = phone;
+    }
+
+    if (user.role !== "club") {
+      if (faculty) {
+        user.faculty = faculty;
+      }
+
+      if (className) {
+        user.className = className;
+      }
+
+      if (gender) {
+        user.gender = gender;
+      }
+
+      if (birthDate) {
+        user.birthDate = birthDate;
+      }
     }
 
     if (unit && user.role === "club") {

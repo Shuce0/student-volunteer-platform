@@ -1,11 +1,14 @@
 import { API_BASE_URL } from "../services/api";
 
-export default function ActivityCard({ activity }) {
+export default function ActivityCard({ activity, statusLabel }) {
   const imageSrc = activity?.image
     ? activity.image.startsWith("http")
       ? activity.image
       : `${API_BASE_URL.replace("/api", "")}${activity.image.startsWith("/") ? "" : "/"}${activity.image}`
     : null;
+  const registeredCount = activity?.registeredParticipants?.length || 0;
+  const maxParticipants = activity?.maxParticipants || 0;
+  const remainingSlots = Math.max(maxParticipants - registeredCount, 0);
 
   return (
     <article
@@ -71,15 +74,21 @@ export default function ActivityCard({ activity }) {
       <div style={{ display: "grid", justifyItems: "end", gap: "0.5rem" }}>
         <span
           className="meta-pill"
+          style={{ background: "rgba(210,29,39,0.06)", color: "#8f0f14" }}
+        >
+          {statusLabel || (remainingSlots > 0 ? "Sắp diễn ra" : "Đã đầy chỗ")}
+        </span>
+        <span
+          className="meta-pill"
           style={{ background: "rgba(210,29,39,0.08)", color: "#a3121a" }}
         >
-          +{activity?.points} điểm
+          {registeredCount}/{maxParticipants || "?"} đã đăng ký
         </span>
         <span
           className="meta-pill"
           style={{ background: "rgba(255,255,255,0.98)" }}
         >
-          Sắp diễn ra
+          {remainingSlots > 0 ? `Còn ${remainingSlots} chỗ` : "Đã đầy chỗ"}
         </span>
       </div>
     </article>

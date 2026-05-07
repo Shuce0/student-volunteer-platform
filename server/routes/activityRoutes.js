@@ -40,5 +40,22 @@ router.post(
   authMiddleware,
   activityController.registerForActivity,
 );
+router.get(
+  "/registrations/pending",
+  authMiddleware,
+  roleMiddleware(["admin", "club"]),
+  activityController.getPendingRegistrations,
+);
+router.post(
+  "/registrations/:id/approve",
+  authMiddleware,
+  roleMiddleware(["admin", "club"]),
+  activityController.approveRegistration,
+);
+router.delete(
+  "/:id/register",
+  authMiddleware,
+  activityController.cancelRegistrationForActivity,
+);
 
 module.exports = router;

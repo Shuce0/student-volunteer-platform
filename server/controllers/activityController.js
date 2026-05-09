@@ -16,6 +16,32 @@ exports.getAllActivities = async (req, res) => {
   }
 };
 
+exports.getClubActivities = async (req, res) => {
+  try {
+    const club = await User.findById(req.params.clubId).select(
+      "name email unit clubId role",
+    );
+
+    if (!club || club.role !== "club") {
+      return res.status(404).json({ message: "Club not found" });
+    }
+
+    const activities = await Activity.find({ organizer: club._id })
+      .populate("organizer", "name email role")
+      .populate("registeredParticipants", "name email")
+      .sort({ date: 1, createdAt: -1 });
+
+    res.json({ club, activities });
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to fetch club activities",
+        error: error.message,
+      });
+  }
+};
+
 exports.getActivityById = async (req, res) => {
   try {
     const activity = await Activity.findById(req.params.id)
@@ -136,12 +162,10 @@ exports.getPendingRegistrations = async (req, res) => {
 
     res.json(registrations);
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to fetch pending registrations",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to fetch pending registrations",
+      error: error.message,
+    });
   }
 };
 
@@ -186,12 +210,31 @@ exports.approveRegistration = async (req, res) => {
       registration,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to approve registration",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Failed to approve registration",
+      error: error.message,
+    });
+  }
+};
+
+exports.getUserRegistrations = async (req, res) => {
+  try {
+    const status = req.query.status || "approved";
+
+    const query = { user: req.userId };
+    if (status) query.status = status;
+
+    const registrations = await Registration.find(query)
+      .populate({
+        path: "activity",
+        select: "title date points organizer",
+        populate: { path: "organizer", select: "name email" },
+      })
+      .sort({ createdAt: -1 });
+
+    res.json(registrations);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch registrations", error: error.message });
   }
 };
 

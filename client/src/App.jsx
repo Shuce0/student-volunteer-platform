@@ -5,6 +5,7 @@ import Activities from "./pages/Activities";
 import GoodDeeds from "./pages/GoodDeeds";
 import Leaderboard from "./pages/Leaderboard";
 import Clubs from "./pages/Clubs";
+import ClubDetails from "./pages/ClubDetails";
 import Login from "./pages/Login";
 import ActivityDetails from "./pages/ActivityDetails";
 import Account from "./pages/Account";
@@ -24,6 +25,7 @@ function App() {
               <Route path="/good-deeds" element={<GoodDeeds />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/clubs" element={<Clubs />} />
+              <Route path="/clubs/:clubId" element={<ClubDetails />} />
               <Route path="/manage" element={<Management />} />
               <Route path="/login" element={<Login />} />
               <Route path="/account" element={<Account />} />

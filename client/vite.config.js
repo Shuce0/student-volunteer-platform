@@ -6,8 +6,13 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
+    allowedHosts: ["vampishly-unproblematical-teisha.ngrok-free.dev"],
     proxy: {
       "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true,
+      },
+      "/uploads": {
         target: "http://localhost:5000",
         changeOrigin: true,
       },

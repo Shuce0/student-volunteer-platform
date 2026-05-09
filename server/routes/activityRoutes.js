@@ -27,6 +27,18 @@ const upload = multer({
 });
 
 router.get("/", activityController.getAllActivities);
+router.get("/club/:clubId", activityController.getClubActivities);
+router.get(
+  "/registrations/pending",
+  authMiddleware,
+  roleMiddleware(["admin", "club"]),
+  activityController.getPendingRegistrations,
+);
+router.get(
+  "/registrations",
+  authMiddleware,
+  activityController.getUserRegistrations,
+);
 router.get("/:id", activityController.getActivityById);
 router.post(
   "/",
@@ -39,12 +51,6 @@ router.post(
   "/:id/register",
   authMiddleware,
   activityController.registerForActivity,
-);
-router.get(
-  "/registrations/pending",
-  authMiddleware,
-  roleMiddleware(["admin", "club"]),
-  activityController.getPendingRegistrations,
 );
 router.post(
   "/registrations/:id/approve",

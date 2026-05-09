@@ -38,6 +38,8 @@ export default function Home() {
   const [featuredActivities, setFeaturedActivities] = useState([]);
   const [leaderboardPreview, setLeaderboardPreview] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [homeError, setHomeError] = useState("");
   const [randomQuote, setRandomQuote] = useState(QUOTES[0]);
   const [bannerIndex, setBannerIndex] = useState(0);
   const { user } = useAuth();
@@ -48,9 +50,15 @@ export default function Home() {
     const fetchActivities = async () => {
       try {
         const data = await activityService.getAllActivities();
-        setFeaturedActivities(data.slice(0, 3));
+        const newestActivities = [...data].sort(
+          (left, right) =>
+            new Date(right.createdAt || right.date) -
+            new Date(left.createdAt || left.date),
+        );
+        setFeaturedActivities(newestActivities.slice(0, 3));
       } catch (error) {
         console.error("Failed to fetch activities:", error);
+        setHomeError("Không tải được danh sách hoạt động công khai.");
       } finally {
         setLoading(false);
       }
@@ -62,6 +70,11 @@ export default function Home() {
         setLeaderboardPreview(response.data.slice(0, 4));
       } catch (error) {
         console.error("Failed to fetch leaderboard preview:", error);
+        setHomeError(
+          (previous) => previous || "Không tải được bảng xếp hạng công khai.",
+        );
+      } finally {
+        setLeaderboardLoading(false);
       }
     };
 
@@ -100,10 +113,19 @@ export default function Home() {
         <div className="dashboard-hero-quote">
           <div className="dashboard-hero-quote__title">
             <span>Lời Bác dạy</span>
-            <span>❝❞</span>
           </div>
-          <p className="dashboard-hero-quote__quote">“{randomQuote.text}”</p>
-          <p className="dashboard-hero-quote__author">— {randomQuote.author}</p>
+          <div className="dashboard-hero-quote__body">
+            <span className="dashboard-hero-quote__ornament dashboard-hero-quote__ornament--open">
+              ❝
+            </span>
+            <p className="dashboard-hero-quote__quote">{randomQuote.text}</p>
+            <span className="dashboard-hero-quote__ornament dashboard-hero-quote__ornament--close">
+              ❞
+            </span>
+            <p className="dashboard-hero-quote__author">
+              — {randomQuote.author}
+            </p>
+          </div>
           <div className="chip-row" style={{ marginTop: "1rem" }}>
             <span className="chip chip--active">HUTECH</span>
             <span className="chip">Tinh thần tình nguyện</span>
@@ -125,7 +147,7 @@ export default function Home() {
               background: "rgba(210,29,39,0.06)",
             }}
           >
-            {user ? `Xin chào, ${user.name}` : "HUTECH Volunteer Dashboard"}
+            {user ? `Xin chào, ${user.name}` : "HUTECH Volunteer"}
           </div>
           <h1
             className="hero-title"
@@ -133,7 +155,7 @@ export default function Home() {
           >
             {user
               ? `Bạn đang có ${user.points || 0} điểm. Tiếp tục bứt phá nhé!`
-              : "Dashboard tình nguyện sinh viên HUTECH"}
+              : "Tình nguyện sinh viên HUTECH"}
           </h1>
           <p
             className="hero-subtitle"
@@ -149,7 +171,7 @@ export default function Home() {
             </Link>
             {user && (
               <Link to="/profile" className="button button--secondary">
-                Hồ sơ của tôi
+                Đăng ký của tôi
               </Link>
             )}
             <Link to="/leaderboard" className="button button--secondary">
@@ -163,7 +185,9 @@ export default function Home() {
             <span>Bảng xếp hạng</span>
             <span>Top 4</span>
           </div>
-          {leaderboardPreview.length > 0 ? (
+          {leaderboardLoading ? (
+            <p className="empty-state">Đang tải bảng xếp hạng...</p>
+          ) : leaderboardPreview.length > 0 ? (
             <div className="page-stack" style={{ gap: "0.75rem" }}>
               {leaderboardPreview.map((member, index) => (
                 <div
@@ -205,7 +229,9 @@ export default function Home() {
               ))}
             </div>
           ) : (
-            <p className="empty-state">Đang tải bảng xếp hạng...</p>
+            <p className="empty-state">
+              Chưa có dữ liệu bảng xếp hạng công khai.
+            </p>
           )}
         </div>
       </section>
@@ -243,15 +269,17 @@ export default function Home() {
         {loading ? (
           <p className="loading-state">Đang tải hoạt động...</p>
         ) : featuredActivities.length > 0 ? (
-          <div className="grid-3">
+          <div className="page-stack home-featured-list">
             {featuredActivities.map((activity) => (
-              <ActivityCard key={activity._id} activity={activity} />
+              <ActivityCard
+                key={activity._id}
+                activity={activity}
+                variant="home-featured"
+              />
             ))}
           </div>
         ) : (
-          <p className="empty-state">
-            Chưa có hoạt động nào. Hãy quay lại sau!
-          </p>
+          <p className="empty-state">Chưa có dữ liệu hoạt động công khai.</p>
         )}
       </section>
 

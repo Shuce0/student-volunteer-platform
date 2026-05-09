@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { activityService } from "../services/activityService";
-import ActivityCard from "../components/ActivityCard";
 
 export default function Clubs() {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedClubId, setSelectedClubId] = useState("");
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -42,15 +42,6 @@ export default function Clubs() {
     );
   }, [activities]);
 
-  useEffect(() => {
-    if (!selectedClubId && clubs.length > 0) {
-      setSelectedClubId(clubs[0]._id);
-    }
-  }, [clubs, selectedClubId]);
-
-  const selectedClub =
-    clubs.find((club) => club._id === selectedClubId) || clubs[0];
-  const selectedClubActivities = selectedClub?.activities || [];
   const totalActivities = activities.length;
   const totalRegistered = activities.reduce(
     (sum, activity) => sum + (activity.registeredParticipants?.length || 0),
@@ -67,8 +58,8 @@ export default function Clubs() {
               CLB đăng hoạt động và người tham gia
             </h1>
             <p className="hero-subtitle">
-              Bấm vào từng CLB để xem chi tiết các hoạt động mà CLB đó đăng tải
-              cùng danh sách người đã đăng ký.
+              Bấm vào từng CLB để chuyển sang trang riêng và xem bài đăng của
+              CLB đó.
             </p>
           </div>
 
@@ -96,125 +87,89 @@ export default function Clubs() {
       ) : clubs.length === 0 ? (
         <p className="empty-state">Chưa có tài khoản CLB nào đăng hoạt động.</p>
       ) : (
-        <div className="grid-2">
-          <section className="section-card animate-rise">
-            <div className="dashboard-section-title">
+        <section className="section-card animate-rise page-stack">
+          <div className="dashboard-section-title">
+            <div>
               <h2 className="section-heading" style={{ marginBottom: 0 }}>
                 Danh sách CLB
               </h2>
-              <span className="meta-pill">{clubs.length} CLB</span>
+              <p className="section-copy" style={{ marginBottom: 0 }}>
+                Bấm vào một CLB để mở trang chi tiết riêng của CLB đó.
+              </p>
             </div>
+            <span className="meta-pill">{clubs.length} CLB</span>
+          </div>
 
-            <div className="page-stack">
-              {clubs.map((club) => {
-                const activityCount = club.activities.length;
-                const registeredCount = club.activities.reduce(
-                  (sum, activity) =>
-                    sum + (activity.registeredParticipants?.length || 0),
-                  0,
-                );
+          <div className="clubs-grid">
+            {clubs.map((club) => {
+              const activityCount = club.activities.length;
+              const registeredCount = club.activities.reduce(
+                (sum, activity) =>
+                  sum + (activity.registeredParticipants?.length || 0),
+                0,
+              );
 
-                const isActive = selectedClub?._id === club._id;
+              return (
+                <div
+                  key={club._id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/clubs/${club._id}`)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "Enter" ||
+                      e.key === " " ||
+                      e.key === "Spacebar"
+                    ) {
+                      e.preventDefault();
+                      navigate(`/clubs/${club._id}`);
+                    }
+                  }}
+                  className="section-card club-card"
+                >
+                  <div
+                    className="dashboard-section-title"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <div>
+                      <h3 style={{ marginBottom: 0 }}>{club.name}</h3>
+                      <p className="section-copy" style={{ marginBottom: 0 }}>
+                        {club.email}
+                      </p>
+                    </div>
+                    <span className="meta-pill">CLB</span>
+                  </div>
 
-                return (
-                  <button
-                    key={club._id}
-                    type="button"
-                    onClick={() => setSelectedClubId(club._id)}
-                    className="section-card"
+                  <div className="meta-row" style={{ marginTop: "0.75rem" }}>
+                    <span className="meta-pill">{activityCount} hoạt động</span>
+                    <span className="meta-pill">
+                      {registeredCount} lượt đăng ký
+                    </span>
+                  </div>
+
+                  <div
                     style={{
-                      textAlign: "left",
-                      border: isActive
-                        ? "1px solid rgba(210, 29, 39, 0.35)"
-                        : "1px solid rgba(210, 29, 39, 0.12)",
-                      boxShadow: isActive
-                        ? "0 16px 34px rgba(210, 29, 39, 0.14)"
-                        : undefined,
-                      cursor: "pointer",
+                      marginTop: "0.85rem",
+                      display: "flex",
+                      justifyContent: "flex-end",
                     }}
                   >
-                    <div
-                      className="dashboard-section-title"
-                      style={{ marginBottom: 0 }}
+                    <button
+                      type="button"
+                      className="button button--primary"
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        navigate(`/clubs/${club._id}`);
+                      }}
                     >
-                      <div>
-                        <h3 style={{ marginBottom: 0 }}>{club.name}</h3>
-                        <p className="section-copy" style={{ marginBottom: 0 }}>
-                          {club.email}
-                        </p>
-                      </div>
-                      <span className="meta-pill">CLB</span>
-                    </div>
-
-                    <div className="meta-row" style={{ marginTop: "0.75rem" }}>
-                      <span className="meta-pill">
-                        {activityCount} hoạt động
-                      </span>
-                      <span className="meta-pill">
-                        {registeredCount} lượt đăng ký
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="section-card animate-rise">
-            <div className="dashboard-section-title">
-              <div>
-                <h2 className="section-heading" style={{ marginBottom: 0 }}>
-                  {selectedClub?.name || "Chi tiết CLB"}
-                </h2>
-                <p className="section-copy" style={{ marginBottom: 0 }}>
-                  {selectedClub?.email || "Chọn một CLB để xem hoạt động"}
-                </p>
-              </div>
-              <span className="meta-pill">Hoạt động đã đăng</span>
-            </div>
-
-            {selectedClubActivities.length === 0 ? (
-              <p className="empty-state">CLB này chưa đăng hoạt động nào.</p>
-            ) : (
-              <div className="page-stack">
-                {selectedClubActivities.map((activity) => (
-                  <article
-                    key={activity._id}
-                    className="page-stack"
-                    style={{ gap: "0.85rem" }}
-                  >
-                    <ActivityCard activity={activity} />
-
-                    <div className="page-stack" style={{ gap: "0.6rem" }}>
-                      <h3 style={{ fontSize: "1.05rem" }}>Người đã đăng ký</h3>
-                      {activity.registeredParticipants?.length > 0 ? (
-                        <div className="chip-row">
-                          {activity.registeredParticipants.map(
-                            (participant) => (
-                              <span
-                                key={participant._id}
-                                className="chip chip--active"
-                              >
-                                {participant.name}
-                              </span>
-                            ),
-                          )}
-                        </div>
-                      ) : (
-                        <p
-                          className="empty-state"
-                          style={{ padding: "0.5rem 0 0" }}
-                        >
-                          Chưa có ai đăng ký hoạt động này.
-                        </p>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
+                      Xem chi tiết
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
       )}
     </div>
   );

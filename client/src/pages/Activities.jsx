@@ -15,19 +15,25 @@ export default function Activities() {
   const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewTab, setViewTab] = useState("upcoming");
+  const [viewTab, setViewTab] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [registering, setRegistering] = useState(null);
   const [toast, setToast] = useState(null);
 
   const currentUserId = user?._id || user?.id || null;
+  const isAnonymous = !user;
   const now = Date.now();
 
   const loadActivities = async () => {
     try {
       const data = await activityService.getAllActivities();
-      setActivities(data);
+      const newestActivities = [...data].sort(
+        (left, right) =>
+          new Date(right.createdAt || right.date) -
+          new Date(left.createdAt || left.date),
+      );
+      setActivities(newestActivities);
     } catch (error) {
       console.error("Failed to fetch activities:", error);
       setToast({
@@ -212,54 +218,30 @@ export default function Activities() {
   };
 
   const getPrimaryAction = (activity) => {
-    if (!user) {
-      return {
-        label: "Đăng nhập để đăng ký",
-        className: "button button--secondary",
-        onClick: () => navigate("/login"),
-        disabled: false,
-      };
-    }
-
+    // Primary action toggles between Đăng ký / Hủy đăng ký depending on state
     if (isParticipated(activity)) {
       return {
         label: "Đã tham gia",
         className: "button button--ghost",
-        disabled: true,
-      };
-    }
-
-    if (!isUpcoming(activity)) {
-      return {
-        label: "Đã diễn ra",
-        className: "button button--ghost",
+        onClick: () => {},
         disabled: true,
       };
     }
 
     if (isRegistered(activity)) {
       return {
-        label: registering === activity._id ? "Đang hủy..." : "Hủy đăng ký",
-        className: "button button--danger",
+        label: "Hủy đăng ký",
+        className: "button button--ghost",
         onClick: () => handleCancel(activity),
         disabled: registering === activity._id,
       };
     }
 
-    if (isFull(activity)) {
-      return {
-        label: "Đã đầy chỗ",
-        className: "button button--ghost",
-        disabled: true,
-      };
-    }
-
     return {
-      label:
-        registering === activity._id ? "Đang đăng ký..." : "Đăng ký tham gia",
+      label: "Đăng ký",
       className: "button button--primary",
       onClick: () => handleRegister(activity),
-      disabled: registering === activity._id,
+      disabled: isFull(activity) || registering === activity._id,
     };
   };
 
@@ -312,9 +294,13 @@ export default function Activities() {
               <button
                 className="button button--secondary"
                 type="button"
-                onClick={() => navigate("/profile")}
+                onClick={() =>
+                  isAnonymous ? navigate("/login") : navigate("/profile")
+                }
               >
-                Xem lịch sử của tôi
+                {isAnonymous
+                  ? "Đăng nhập để theo dõi của tôi"
+                  : "Xem lịch sử của tôi"}
               </button>
             </div>
           </div>
@@ -347,6 +333,29 @@ export default function Activities() {
           </div>
         </div>
       </section>
+
+      {isAnonymous && (
+        <section className="section-card animate-rise">
+          <div className="dashboard-section-title">
+            <div>
+              <h2 className="section-heading" style={{ marginBottom: 0 }}>
+                Chế độ xem công khai
+              </h2>
+              <p className="section-copy" style={{ marginBottom: 0 }}>
+                Bạn vẫn có thể xem danh sách hoạt động, lọc, tìm kiếm và mở chi
+                tiết. Chỉ cần đăng nhập khi muốn đăng ký hoặc hủy đăng ký.
+              </p>
+            </div>
+            <button
+              className="button button--secondary"
+              type="button"
+              onClick={() => navigate("/login")}
+            >
+              Đăng nhập
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="section-card animate-rise activity-filter-panel">
         <div className="dashboard-section-title activity-filter-panel__header">
@@ -438,18 +447,16 @@ export default function Activities() {
                   activity={activity}
                   statusLabel={getStatusLabel(activity)}
                 />
-                <div className="hero-actions" style={{ gap: "0.75rem" }}>
+                <div className="activity-actions" style={{ gap: "0.75rem" }}>
                   <button
-                    className="button button--secondary"
+                    className="button button--secondary activity-action-button"
                     type="button"
-                    style={{ flex: "1 1 0" }}
                     onClick={() => navigate(`/activities/${activity._id}`)}
                   >
                     Xem chi tiết
                   </button>
                   <button
-                    className={action.className}
-                    style={{ flex: "1 1 0" }}
+                    className={`${action.className} activity-action-button`}
                     onClick={action.onClick}
                     disabled={action.disabled}
                     type="button"

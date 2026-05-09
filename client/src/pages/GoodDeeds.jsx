@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 import { goodDeedService } from "../services/goodDeedService";
 import GoodDeedCard from "../components/GoodDeedCard";
 
 export default function GoodDeeds() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [goodDeeds, setGoodDeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -87,10 +91,21 @@ export default function GoodDeeds() {
             <div className="hero-actions">
               <button
                 className="button button--primary"
-                onClick={() => setShowForm((value) => !value)}
+                onClick={() => {
+                  if (!user) {
+                    navigate("/login");
+                    return;
+                  }
+
+                  setShowForm((value) => !value);
+                }}
                 type="button"
               >
-                {showForm ? "Đóng form" : "Gửi việc tốt"}
+                {user
+                  ? showForm
+                    ? "Đóng form"
+                    : "Gửi việc tốt"
+                  : "Đăng nhập để gửi việc tốt"}
               </button>
             </div>
           </div>
@@ -121,6 +136,29 @@ export default function GoodDeeds() {
           </div>
         </div>
       </section>
+
+      {!user && (
+        <section className="section-card animate-rise">
+          <div className="dashboard-section-title">
+            <div>
+              <h2 className="section-heading" style={{ marginBottom: 0 }}>
+                Cần đăng nhập để gửi việc tốt
+              </h2>
+              <p className="section-copy" style={{ marginBottom: 0 }}>
+                Bạn vẫn có thể xem danh sách việc tốt đã duyệt, nhưng để gửi yêu
+                cầu mới thì cần đăng nhập trước.
+              </p>
+            </div>
+            <button
+              className="button button--secondary"
+              type="button"
+              onClick={() => navigate("/login")}
+            >
+              Đăng nhập ngay
+            </button>
+          </div>
+        </section>
+      )}
 
       {message && (
         <div className="notice notice--success animate-rise">{message}</div>

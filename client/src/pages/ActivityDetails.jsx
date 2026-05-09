@@ -303,8 +303,16 @@ export default function ActivityDetails() {
         </div>
       </section>
 
-      <section className="grid-2">
-        <ActivityCard activity={activity} statusLabel={statusLabel} />
+      <section className="activity-details-layout">
+        <section className="section-card animate-rise activity-details-hero">
+          <div className="activity-details-hero__imageWrap">
+            <ActivityCard
+              activity={activity}
+              statusLabel={statusLabel}
+              variant="featured"
+            />
+          </div>
+        </section>
 
         <section className="section-card animate-rise page-stack">
           <div>
@@ -340,13 +348,25 @@ export default function ActivityDetails() {
             </div>
           </div>
 
-          <div className="meta-row">
-            <span className="meta-pill">{activity.category}</span>
-            <span className="meta-pill">+{activity.points} điểm</span>
-            <span className="meta-pill">{statusLabel}</span>
-          </div>
-
           <div className="page-stack" style={{ gap: "0.65rem" }}>
+            <div className="activity-details-ctaRow">
+              <button
+                className="button button--secondary"
+                type="button"
+                onClick={() => navigate("/activities")}
+              >
+                Danh sách hoạt động
+              </button>
+              <button
+                className={action.className}
+                type="button"
+                onClick={action.onClick}
+                disabled={action.disabled}
+              >
+                {action.label}
+              </button>
+            </div>
+
             <div>
               <h3 className="section-copy" style={{ marginBottom: "0.35rem" }}>
                 Người đã tham gia
@@ -386,24 +406,6 @@ export default function ActivityDetails() {
                 ))}
               </div>
             )}
-          </div>
-
-          <div className="hero-actions" style={{ marginTop: "0.5rem" }}>
-            <button
-              className="button button--secondary"
-              type="button"
-              onClick={() => navigate("/activities")}
-            >
-              Danh sách hoạt động
-            </button>
-            <button
-              className={action.className}
-              type="button"
-              onClick={action.onClick}
-              disabled={action.disabled}
-            >
-              {action.label}
-            </button>
           </div>
         </section>
       </section>

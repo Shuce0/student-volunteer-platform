@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useAuth } from "../hooks/useAuth";
 import api from "../services/api";
 import LeaderboardItem from "../components/LeaderboardItem";
 
 export default function Leaderboard() {
+  const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -42,6 +44,20 @@ export default function Leaderboard() {
               Xem những gương mặt dẫn đầu, theo dõi điểm số và lan tỏa tinh thần
               cống hiến trong cộng đồng.
             </p>
+            {!user && (
+              <div
+                className="meta-pill"
+                style={{
+                  marginTop: "1rem",
+                  display: "inline-flex",
+                  background: "rgba(255,255,255,0.14)",
+                  color: "#fff",
+                  borderColor: "rgba(255,255,255,0.22)",
+                }}
+              >
+                Bảng xếp hạng công khai, không cần đăng nhập để xem
+              </div>
+            )}
           </div>
 
           <div className="hero-panel hero-panel--muted">

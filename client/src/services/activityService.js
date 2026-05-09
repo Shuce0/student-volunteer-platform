@@ -19,6 +19,15 @@ export const activityService = {
     }
   },
 
+  getClubActivitiesById: async (clubId) => {
+    try {
+      const response = await api.get(`/activities/club/${clubId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to fetch club activities";
+    }
+  },
+
   createActivity: async (activityData) => {
     try {
       const response = await api.post("/activities", activityData, {
@@ -70,6 +79,15 @@ export const activityService = {
       return response.data;
     } catch (error) {
       throw error.response?.data?.message || "Failed to approve registration";
+    }
+  },
+
+  getUserRegistrations: async (status = "approved") => {
+    try {
+      const response = await api.get(`/activities/registrations?status=${status}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.message || "Failed to fetch user registrations";
     }
   },
 };
